@@ -32,6 +32,29 @@
   background-size: 100px 100px, 100px 100px, 20px 20px, 20px 20px;
 }
 
+.bacterium {
+  position: absolute;
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+  /* z-index: 3; */
+}
+
+
+
+.bacterium--invalid {
+  animation: bacterium-flash 240ms ease-out;
+}
+
+@keyframes bacterium-flash {
+  0% {
+    background: rgba(255, 80, 80, 0.25);
+  }
+  100% {
+    background: rgba(255, 80, 80, 0);
+  }
+}
+
 .hint {
   position: absolute;
   left: 16px;
