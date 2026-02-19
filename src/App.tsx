@@ -12,10 +12,11 @@ function App() {
     lastY: 0,
   })
   const [view, setView] = useState({x:-107.52567038142365,y:-2903.38181135754,scale:5})
-  const [bacteria, setBacteria] = useState([{x: 0, y: 0 }])
+  const [bacteria, setBacteria] = useState([
+    {x: 0, y: 0, spawnFrom: null as null | 'left' | 'below' },
+  ])
   const [clickCounter, setClickCounter] = useState(0)
-  const [invalidId, setInvalidId] = useState<string | null>(null)
-  const [invalidToken, setInvalidToken] = useState(0)
+  const [invalidPulses, setInvalidPulses] = useState<Record<string, number>>({})
 
   const handleWheel = (event: React.WheelEvent<HTMLDivElement>) => {
     event.preventDefault()
@@ -63,8 +64,7 @@ function App() {
 
 
   const triggerInvalid = (id: string) => {
-    setInvalidId(id)
-    setInvalidToken((token) => token + 1)
+    setInvalidPulses((prev) => ({ ...prev, [id]: (prev[id] ?? 0) + 1 }))
   }
 
   const handleBacteriumClick = (x: number, y: number) => {
@@ -73,11 +73,10 @@ function App() {
     if (!(above || right)) {
       let current = bacteria.filter((bacterium) => !(bacterium.x == x && bacterium.y == y))
       current.push(...[
-        {x: x, y: y + 1},
-        {x: x + 1, y: y},
+        {x: x, y: y + 1, spawnFrom: 'below'},
+        {x: x + 1, y: y, spawnFrom: 'left'},
       ])
       setClickCounter((value) => value + 1)
-      setInvalidId(null)
       setBacteria(current)
     } else {
       triggerInvalid(`${x},${y}`)
@@ -102,14 +101,15 @@ function App() {
       >
         {bacteria.map((bacterium) => {
           const id = `${bacterium.x},${bacterium.y}`
-          const isInvalid = invalidId === id
-          const key = `${id}:${isInvalid ? invalidToken : 0}`
+          const invalidPulse = invalidPulses[id] ?? 0
+          const key = id
           return (
           <Bacterium
             key={key}
             x={bacterium.x}
             y={bacterium.y}
-            invalid={isInvalid}
+            invalidPulse={invalidPulse}
+            spawnFrom={bacterium.spawnFrom}
             onClick={handleBacteriumClick}
           />
           )

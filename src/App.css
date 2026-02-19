@@ -40,11 +40,43 @@
   /* z-index: 3; */
 }
 
-
-
-.bacterium--invalid {
+.bacterium__flash {
+  position: absolute;
+  inset: 0;
   animation: bacterium-flash 240ms ease-out;
+  pointer-events: none;
 }
+
+.bacterium--spawn-left {
+  animation: bacterium-spawn-left 220ms cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+.bacterium--spawn-below {
+  animation: bacterium-spawn-below 220ms cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+@keyframes bacterium-spawn-left {
+  0% {
+    transform: translateX(-20px) scale(0.9);
+    opacity: 0;
+  }
+  100% {
+    transform: translateX(0) scale(1);
+    opacity: 1;
+  }
+}
+
+@keyframes bacterium-spawn-below {
+  0% {
+    transform: translateY(20px) scale(0.9);
+    opacity: 0;
+  }
+  100% {
+    transform: translateY(0) scale(1);
+    opacity: 1;
+  }
+}
+
 
 @keyframes bacterium-flash {
   0% {
