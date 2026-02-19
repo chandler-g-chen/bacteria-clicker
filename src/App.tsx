@@ -12,8 +12,10 @@ function App() {
     lastY: 0,
   })
   const [view, setView] = useState({x:-107.52567038142365,y:-2903.38181135754,scale:5})
-  const [bacteria, setBacteria] = useState([
-    {x: 0, y: 0, spawnFrom: null as null | 'left' | 'below' },
+  type SpawnFrom = 'left' | 'below' | null
+  type BacteriumState = { x: number; y: number; spawnFrom: SpawnFrom }
+  const [bacteria, setBacteria] = useState<BacteriumState[]>([
+    {x: 0, y: 0, spawnFrom: null },
   ])
   const [clickCounter, setClickCounter] = useState(0)
   const [invalidPulses, setInvalidPulses] = useState<Record<string, number>>({})
@@ -72,10 +74,10 @@ function App() {
     const right = bacteria.find((bacterium) => bacterium.x == x + 1 && bacterium.y == y)
     if (!(above || right)) {
       let current = bacteria.filter((bacterium) => !(bacterium.x == x && bacterium.y == y))
-      current.push(...[
+      current.push(
         {x: x, y: y + 1, spawnFrom: 'below'},
         {x: x + 1, y: y, spawnFrom: 'left'},
-      ])
+      )
       setClickCounter((value) => value + 1)
       setBacteria(current)
     } else {
