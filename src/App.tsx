@@ -11,10 +11,11 @@ function App() {
     lastX: 0,
     lastY: 0,
   })
-  const invalidTimer = useRef<number | null>(null)
   const [view, setView] = useState({x:-107.52567038142365,y:-2903.38181135754,scale:5})
   const [bacteria, setBacteria] = useState([{x: 0, y: 0 }])
   const [clickCounter, setClickCounter] = useState(0)
+  const [invalidId, setInvalidId] = useState<string | null>(null)
+  const [invalidToken, setInvalidToken] = useState(0)
 
   const handleWheel = (event: React.WheelEvent<HTMLDivElement>) => {
     event.preventDefault()
@@ -61,19 +62,27 @@ function App() {
 
 
 
+  const triggerInvalid = (id: string) => {
+    setInvalidId(id)
+    setInvalidToken((token) => token + 1)
+  }
+
   const handleBacteriumClick = (x: number, y: number) => {
-      const above = bacteria.find((bacterium) => bacterium.x == x && bacterium.y == y + 1)
-      const right = bacteria.find((bacterium) => bacterium.x == x + 1 && bacterium.y == y)
-      if (!(above || right)) {
-        let current = bacteria.filter((bacterium) => !(bacterium.x == x && bacterium.y == y))
-        current.push(...[
-          {x: x, y: y + 1},
-          {x: x + 1, y: y},
-        ])
-        setClickCounter(clickCounter + 1)
-        setBacteria(current)
-      } 
+    const above = bacteria.find((bacterium) => bacterium.x == x && bacterium.y == y + 1)
+    const right = bacteria.find((bacterium) => bacterium.x == x + 1 && bacterium.y == y)
+    if (!(above || right)) {
+      let current = bacteria.filter((bacterium) => !(bacterium.x == x && bacterium.y == y))
+      current.push(...[
+        {x: x, y: y + 1},
+        {x: x + 1, y: y},
+      ])
+      setClickCounter((value) => value + 1)
+      setInvalidId(null)
+      setBacteria(current)
+    } else {
+      triggerInvalid(`${x},${y}`)
     }
+  }
 
   return (
     <div
@@ -91,13 +100,20 @@ function App() {
           transform: `translate(${view.x}px, ${view.y}px) scale(${view.scale})`, zIndex:1
         }}
       >
-        {bacteria.map((bacterium) => (
+        {bacteria.map((bacterium) => {
+          const id = `${bacterium.x},${bacterium.y}`
+          const isInvalid = invalidId === id
+          const key = `${id}:${isInvalid ? invalidToken : 0}`
+          return (
           <Bacterium
+            key={key}
             x={bacterium.x}
             y={bacterium.y}
+            invalid={isInvalid}
             onClick={handleBacteriumClick}
           />
-        ))}
+          )
+        })}
       </div>
       <div style={{zIndex: 2, position: 'absolute', userSelect: 'text'}}>Click Counter: {clickCounter}</div>
       <div className="hint" style={{zIndex: 3}}>Scroll to zoom. Click-drag to pan.</div>
