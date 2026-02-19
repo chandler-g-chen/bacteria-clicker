@@ -1,4 +1,4 @@
-import reactLogo from './assets/react.svg'
+import bacteria_image from './assets/bacteria.png'
 
 let size = 20
 type BacteriumProps = {
@@ -27,7 +27,7 @@ function Bacterium({x, y, invalidPulse, spawnFrom, onClick }: BacteriumProps) {
       onPointerDown={handlePointerDown}
     >
       {invalidPulse ? <div key={invalidPulse} className="bacterium__flash" /> : null}
-      <img src={reactLogo} alt="React logo" style={{width:size, height:size}} />
+      <img src={bacteria_image}  style={{width:size - 5, height:size - 5}} />
     </div>
   )
 }
