@@ -10,8 +10,22 @@ function App() {
     dragging: false,
     lastX: 0,
     lastY: 0,
+    pointerId: null as number | null,
+  })
+  const activePointers = useRef(new Map<number, {x: number; y: number}>())
+  const pinchState = useRef({
+    active: false,
+    startDistance: 0,
+    startScale: 1,
+    startViewX: 0,
+    startViewY: 0,
+    startMidX: 0,
+    startMidY: 0,
   })
   const [view, setView] = useState({x:-107.52567038142365,y:-2903.38181135754,scale:5})
+  const viewRef = useRef(view)
+  const viewRaf = useRef<number | null>(null)
+  const pendingView = useRef(view)
   type SpawnFrom = 'left' | 'below' | null
   type BacteriumState = { x: number; y: number; spawnFrom: SpawnFrom }
   const [bacteria, setBacteria] = useState<BacteriumState[]>([
@@ -30,37 +44,106 @@ function App() {
     const cursorY = event.clientY - rect.top
 
     const zoomDirection = event.deltaY > 0 ? 1 / 1.1 : 1.1
-    setView((prev) => {
-      const nextScale = Math.min(5, Math.max(0.2, prev.scale * zoomDirection))
-      const worldX = (cursorX - prev.x) / prev.scale
-      const worldY = (cursorY - prev.y) / prev.scale
-      const nextX = cursorX - worldX * nextScale
-      const nextY = cursorY - worldY * nextScale
-      return { x: nextX, y: nextY, scale: nextScale }
-    })
+    const prev = viewRef.current
+    const nextScale = Math.min(5, Math.max(0.2, prev.scale * zoomDirection))
+    const worldX = (cursorX - prev.x) / prev.scale
+    const worldY = (cursorY - prev.y) / prev.scale
+    const nextX = cursorX - worldX * nextScale
+    const nextY = cursorY - worldY * nextScale
+    const next = { x: nextX, y: nextY, scale: nextScale }
+    viewRef.current = next
+    setView(next)
   }
 
   const handlePointerDown = (event: React.PointerEvent<HTMLDivElement>) => {
     if (event.button !== 0) return
     event.currentTarget.setPointerCapture(event.pointerId)
-    dragState.current.dragging = true
-    dragState.current.lastX = event.clientX
-    dragState.current.lastY = event.clientY
+    activePointers.current.set(event.pointerId, { x: event.clientX, y: event.clientY })
+    if (activePointers.current.size === 2) {
+      const [a, b] = Array.from(activePointers.current.values())
+      const dx = b.x - a.x
+      const dy = b.y - a.y
+      pinchState.current.active = true
+      pinchState.current.startDistance = Math.hypot(dx, dy)
+      pinchState.current.startScale = viewRef.current.scale
+      pinchState.current.startViewX = viewRef.current.x
+      pinchState.current.startViewY = viewRef.current.y
+      pinchState.current.startMidX = (a.x + b.x) / 2
+      pinchState.current.startMidY = (a.y + b.y) / 2
+      dragState.current.dragging = false
+      dragState.current.pointerId = null
+      return
+    }
+    if (activePointers.current.size === 1) {
+      dragState.current.dragging = true
+      dragState.current.pointerId = event.pointerId
+      dragState.current.lastX = event.clientX
+      dragState.current.lastY = event.clientY
+    }
   }
 
   const handlePointerMove = (event: React.PointerEvent<HTMLDivElement>) => {
+    if (activePointers.current.has(event.pointerId)) {
+      activePointers.current.set(event.pointerId, { x: event.clientX, y: event.clientY })
+    }
+
+    const scheduleView = (next: { x: number; y: number; scale: number }) => {
+      pendingView.current = next
+      viewRef.current = next
+      if (viewRaf.current !== null) return
+      viewRaf.current = requestAnimationFrame(() => {
+        viewRaf.current = null
+        setView(pendingView.current)
+      })
+    }
+
+    if (pinchState.current.active && activePointers.current.size === 2) {
+      const container = containerRef.current
+      if (!container) return
+      const [a, b] = Array.from(activePointers.current.values())
+      const dx = b.x - a.x
+      const dy = b.y - a.y
+      const distance = Math.max(1, Math.hypot(dx, dy))
+      const scaleFactor = distance / pinchState.current.startDistance
+      const nextScale = Math.min(5, Math.max(0.2, pinchState.current.startScale * scaleFactor))
+      const rect = container.getBoundingClientRect()
+      const midX = (a.x + b.x) / 2 - rect.left
+      const midY = (a.y + b.y) / 2 - rect.top
+      const worldX = (midX - pinchState.current.startViewX) / pinchState.current.startScale
+      const worldY = (midY - pinchState.current.startViewY) / pinchState.current.startScale
+      const nextX = midX - worldX * nextScale
+      const nextY = midY - worldY * nextScale
+      scheduleView({ x: nextX, y: nextY, scale: nextScale })
+      return
+    }
+
     if (!dragState.current.dragging) return
+    if (dragState.current.pointerId !== event.pointerId) return
     const dx = event.clientX - dragState.current.lastX
     const dy = event.clientY - dragState.current.lastY
     dragState.current.lastX = event.clientX
     dragState.current.lastY = event.clientY
-    setView((prev) => ({ ...prev, x: prev.x + dx, y: prev.y + dy }))
+    const prev = viewRef.current
+    scheduleView({ x: prev.x + dx, y: prev.y + dy, scale: prev.scale })
   }
 
   const handlePointerUp = (event: React.PointerEvent<HTMLDivElement>) => {
-    if (!dragState.current.dragging) return
-    dragState.current.dragging = false
+    if (activePointers.current.has(event.pointerId)) {
+      activePointers.current.delete(event.pointerId)
+    }
     event.currentTarget.releasePointerCapture(event.pointerId)
+    if (activePointers.current.size < 2) {
+      pinchState.current.active = false
+    }
+    if (dragState.current.pointerId === event.pointerId) {
+      dragState.current.dragging = false
+      dragState.current.pointerId = null
+    }
+  }
+
+  const handlePointerLeave = (event: React.PointerEvent<HTMLDivElement>) => {
+    if (event.currentTarget.hasPointerCapture(event.pointerId)) return
+    handlePointerUp(event)
   }
 
 
@@ -93,7 +176,8 @@ function App() {
       onPointerDown={handlePointerDown}
       onPointerMove={handlePointerMove}
       onPointerUp={handlePointerUp}
-      onPointerLeave={handlePointerUp}
+      onPointerCancel={handlePointerUp}
+      onPointerLeave={handlePointerLeave}
     >
       <div
         className="grid"
