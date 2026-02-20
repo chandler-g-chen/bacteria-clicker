@@ -22,7 +22,7 @@ function App() {
     startMidX: 0,
     startMidY: 0,
   })
-  const [view, setView] = useState({x:-107.52567038142365,y:-2903.38181135754,scale:5})
+  const [view, setView] = useState({x:-400,y:-3600 + window.innerHeight,scale:5})
   const viewRef = useRef(view)
   const viewRaf = useRef<number | null>(null)
   const pendingView = useRef(view)
@@ -202,7 +202,15 @@ function App() {
         })}
       </div>
       <div style={{zIndex: 2, position: 'absolute', userSelect: 'text'}}>Click Counter: {clickCounter}</div>
-      <div className="hint" style={{zIndex: 3}}>Scroll to zoom. Click-drag to pan.</div>
+      <a
+        className="hint"
+        style={{zIndex: 3}}
+        href="https://www.youtube.com/shorts/d0ai33oqqDE"
+        target="_blank"
+        rel="noreferrer"
+      >
+        Video
+      </a>
     </div>
   )
 }
